@@ -9,11 +9,11 @@ def main():
     # =============== Most popular three articles of all time ================
     print "\nMost popular three articles of all time.\n"
     c.execute("""
-              select articles.title as article, views_report.views from
-              (select replace(path,'/article/','') slug, count(path) as views
-              from log where log.path <> '/' and status='200 OK' group by path
-              order by views desc limit 3) views_report join articles on
-              views_report.slug=articles.slug order by views_report.views desc
+              select articles.title , count(path) as views
+              from log join articles on
+              log.path = CONCAT('/article/', articles.slug)
+              where log.path <> '/' and status='200 OK' group by
+              articles.title, log.path order by views desc limit 3
               """)
     rows = c.fetchall()
     for row in rows:
@@ -22,14 +22,14 @@ def main():
     # =============== Most popular article authors of all time ===============
     print "\n\nMost popular article authors of all time.\n"
     c.execute("""
-              select authors.name, views_by_authors.total_views from
-              (select author as author_id , sum(views) total_views from
-              (select * from (select replace(path,'/article/','') slug,
-              count(path) as views from log where log.path <> '/' group by path
-              order by views desc) views_report join articles on
-              views_report.slug = articles.slug) author_view_report
-              group by author order by total_views desc ) views_by_authors
-              join authors on views_by_authors.author_id = authors.id
+              select authors.name, sum(author_views.views) as views from(
+              select articles.author, count(path) as views
+              from log join articles on
+              log.path = CONCAT('/article/', articles.slug)
+              where log.path <> '/' and status='200 OK' group by
+              articles.author, log.path order by views desc) author_views
+              join authors on author_views.author = authors.id group by
+              authors.name,author_views.author order by views desc
               """)
     rows = c.fetchall()
     for row in rows:
